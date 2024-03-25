@@ -6,47 +6,40 @@ import simulation.TickManager;
 
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
-import java.util.function.Consumer;
 
-public class Assistant extends Thread implements Consumer<Integer> {
+public class Assistant extends Thread {
     private final List<Section> sections;
     private final TickManager tickManager;
     private final BlockingQueue<Delivery> deliveryQueue;
     private volatile int lastActionTick = 0;
+    private final Object tickUpdateMonitor; // Shared object for wait/notify
 
-    public Assistant(List<Section> sections, String name, TickManager tickManager, BlockingQueue<Delivery> deliveryQueue) {
+    // Updated constructor to include tickUpdateMonitor
+    public Assistant(List<Section> sections, String name, TickManager tickManager, BlockingQueue<Delivery> deliveryQueue, Object tickUpdateMonitor) {
         super(name);
         this.sections = sections;
         this.tickManager = tickManager;
         this.deliveryQueue = deliveryQueue;
-        this.tickManager.registerTickObserver(this); // Register as observer
+        this.tickUpdateMonitor = tickUpdateMonitor;
     }
 
     @Override
     public void run() {
-        // The actual work is moved to the accept method to be triggered by tick updates
         while (!Thread.currentThread().isInterrupted()) {
-            try {
-                Thread.sleep(100); // Sleep to reduce CPU usage, waiting for tick updates
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt(); // Preserve interrupt status
-                System.out.println(getName() + " was interrupted.");
-            }
-        }
-    }
-
-    @Override
-    public void accept(Integer currentTick) {
-        // Perform actions in response to tick updates
-        if (currentTick - lastActionTick >= 10) { // Check if it's time to act
-            try {
-                Delivery delivery = deliveryQueue.take(); // Attempt to take a delivery from the queue
-                System.out.println("Tick: " + currentTick + " | " + getName() + " started processing a delivery.");
-                stockItems(delivery, currentTick);
-                lastActionTick = currentTick;
-            } catch (InterruptedException e) {
-                System.out.println(getName() + " was interrupted while processing a delivery.");
-                Thread.currentThread().interrupt();
+            synchronized (tickUpdateMonitor) {
+                try {
+                    tickUpdateMonitor.wait(); // Wait for the next tick update
+                    int currentTick = tickManager.getCurrentTick();
+                    if (currentTick - lastActionTick >= 10) {
+                        if (!deliveryQueue.isEmpty()) {
+                            Delivery delivery = deliveryQueue.take();
+                            stockItems(delivery, currentTick);
+                            lastActionTick = currentTick;
+                        }
+                    }
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
             }
         }
     }
@@ -71,6 +64,6 @@ public class Assistant extends Thread implements Consumer<Integer> {
     @Override
     public void interrupt() {
         super.interrupt();
-        tickManager.unregisterTickObserver(this); // Unregister as observer when interrupted
+        // tickManager.unregisterTickObserver(this); // Unregister as observer when interrupted
     }
 }

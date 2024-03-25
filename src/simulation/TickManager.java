@@ -1,27 +1,16 @@
 package simulation;
 
-import java.util.List;
-import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Consumer;
 
 public class TickManager implements Runnable {
     private final AtomicInteger currentTick = new AtomicInteger(0);
-    private final int tickTimeSize; // Time in milliseconds for one tick
+    private final int tickTimeSize;
     private final AtomicBoolean running = new AtomicBoolean(true);
-    private final List<Consumer<Integer>> tickObservers = new CopyOnWriteArrayList<>();
+    private final Object tickUpdateMonitor = new Object();
 
     public TickManager(int tickTimeSize) {
         this.tickTimeSize = tickTimeSize;
-    }
-
-    public void registerTickObserver(Consumer<Integer> observer) {
-        tickObservers.add(observer);
-    }
-
-    public void unregisterTickObserver(Consumer<Integer> observer) {
-        tickObservers.remove(observer);
     }
 
     @Override
@@ -29,16 +18,17 @@ public class TickManager implements Runnable {
         while (running.get()) {
             try {
                 Thread.sleep(tickTimeSize);
-                int tick = currentTick.incrementAndGet();
-                // Notify all registered observers about the new tick
-                tickObservers.forEach(observer -> observer.accept(tick));
+                currentTick.incrementAndGet();
+                synchronized (tickUpdateMonitor) {
+                    tickUpdateMonitor.notifyAll();
+                }
             } catch (InterruptedException e) {
                 running.set(false);
-                Thread.currentThread().interrupt(); // Preserve interrupt status
-                System.out.println("TickManager was interrupted and is stopping.");
+                Thread.currentThread().interrupt();
             }
         }
     }
+
 
     public int getCurrentTick() {
         return currentTick.get();
@@ -46,5 +36,12 @@ public class TickManager implements Runnable {
 
     public void stopTickManager() {
         running.set(false);
+        synchronized (tickUpdateMonitor) {
+            tickUpdateMonitor.notifyAll(); // Ensure all waiting threads can exit
+        }
+    }
+
+    public Object getTickUpdateMonitor() {
+        return tickUpdateMonitor;
     }
 }
