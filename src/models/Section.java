@@ -6,7 +6,8 @@ import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
-public class Section {
+public class Section
+{
     private final Queue<Item> items = new LinkedList<>();
     private final String name;
     private final int capacity;
@@ -15,30 +16,38 @@ public class Section {
     private final Condition notFull = lock.newCondition();
     private final Condition notEmpty = lock.newCondition();
 
-    public Section(String name, int capacity) {
+    public Section(String name, int capacity)
+    {
         this.name = name;
         this.capacity = capacity;
     }
 
-    public void addItem(Item item, int tickCount) throws InterruptedException {
+    public void addItem(Item item, int tickCount) throws InterruptedException
+    {
         lock.lock();
-        try {
-            while (items.size() >= capacity) {
+        try
+        {
+            while (items.size() >= capacity)
+            {
                 notFull.await(); // Wait if section is full
             }
             items.add(item);
             notEmpty.signal(); // Notify waiting customers that an item is available
             // Enhanced logging with tick count
             System.out.println("Tick: " + tickCount + " | " + "Item added to " + name + ": " + item);
-        } finally {
+        } finally
+        {
             lock.unlock();
         }
     }
 
-    public Item removeItem(int tickCount) throws InterruptedException {
+    public Item removeItem(int tickCount) throws InterruptedException
+    {
         lock.lock();
-        try {
-            while (items.isEmpty()) {
+        try
+        {
+            while (items.isEmpty())
+            {
                 notEmpty.await(); // Wait if section is empty
             }
             Item item = items.poll();
@@ -46,39 +55,50 @@ public class Section {
             // Enhanced logging with tick count
             System.out.println("Tick: " + tickCount + " | " + "Item removed from " + name + ": " + item);
             return item;
-        } finally {
+        } finally
+        {
             lock.unlock();
         }
     }
 
-    public boolean isFull() {
+    public boolean isFull()
+    {
         lock.lock();
-        try {
+        try
+        {
             return items.size() >= capacity;
-        } finally {
+        } finally
+        {
             lock.unlock();
         }
     }
 
-    public boolean isEmpty() {
+    public boolean isEmpty()
+    {
         lock.lock();
-        try {
+        try
+        {
             return items.isEmpty();
-        } finally {
+        } finally
+        {
             lock.unlock();
         }
     }
 
-    public String getName() {
+    public String getName()
+    {
         return name;
     }
 
     // Method to display current items in the section for debugging
-    public void displayItems() {
+    public void displayItems()
+    {
         lock.lock();
-        try {
+        try
+        {
             System.out.println("Items in " + name + ": " + items.size());
-        } finally {
+        } finally
+        {
             lock.unlock();
         }
     }

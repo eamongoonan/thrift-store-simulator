@@ -13,10 +13,12 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-public class ThriftStoreSimulation {
+public class ThriftStoreSimulation
+{
     private static final int TICK_TIME = 100; // Milliseconds per tick
 
-    public static void main(String[] args) {
+    public static void main(String[] args)
+    {
         System.out.println("Initializing Thrift Store Simulation...");
 
         List<Section> sections = new ArrayList<>();
@@ -35,6 +37,7 @@ public class ThriftStoreSimulation {
         DeliveryManager deliveryManager = new DeliveryManager(deliveryQueue, tickManager);
         executor.execute(deliveryManager);
 
+        // Object tickUpdateMonitor is no longer needed for Customer instantiation
         Object tickUpdateMonitor = tickManager.getTickUpdateMonitor();
 
         for (int i = 0; i < 2; i++) {
@@ -42,18 +45,24 @@ public class ThriftStoreSimulation {
             executor.execute(assistant);
         }
 
-        for (int i = 0; i < 5; i++) {
-            Customer customer = new Customer(sections, "Customer-" + (i + 1), tickManager, 10, tickUpdateMonitor);
+
+        for (int i = 0; i < 5; i++)
+        {
+            // Updated to match the new Customer constructor without actionIntervalTicks and tickUpdateMonitor
+            Customer customer = new Customer(sections, "Customer-" + (i + 1), tickManager);
             executor.execute(customer);
         }
 
-        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+        Runtime.getRuntime().addShutdownHook(new Thread(() ->
+        {
             System.out.println("Shutting down simulation...");
             tickManager.stopTickManager();
             executor.shutdownNow();
-            try {
+            try
+            {
                 tickThread.join();
-            } catch (InterruptedException e) {
+            } catch (InterruptedException e)
+            {
                 Thread.currentThread().interrupt();
             }
             System.out.println("Simulation has been successfully shutdown.");
