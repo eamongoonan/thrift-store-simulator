@@ -10,7 +10,8 @@ public class DeliveryManager implements Runnable {
     private final BlockingQueue<Delivery> deliveryQueue;
     private final TickManager tickManager;
     private final Random random = new Random();
-    private static final double DELIVERY_PROBABILITY = 0.01; // Probability of delivery per tick
+    private int lastDeliveryTick = -1; // Track the last tick on which a delivery was made
+    private static final int COOLDOWN_TICKS = 50; // Minimum number of ticks between deliveries
 
     public DeliveryManager(BlockingQueue<Delivery> deliveryQueue, TickManager tickManager) {
         this.deliveryQueue = deliveryQueue;
@@ -22,25 +23,26 @@ public class DeliveryManager implements Runnable {
         while (!Thread.currentThread().isInterrupted()) {
             int currentTick = tickManager.getCurrentTick();
 
-            // Attempt to create a delivery based on defined probability
-            if (random.nextDouble() < DELIVERY_PROBABILITY) {
+            // Ensure a delivery is made only once per tick and respects the cooldown period
+            if (currentTick - lastDeliveryTick >= COOLDOWN_TICKS && random.nextDouble() < 0.01) { // Assuming a 1% chance per tick
                 Delivery delivery = new Delivery();
                 try {
-                    deliveryQueue.put(delivery); // Attempt to add the delivery to the queue
+                    deliveryQueue.put(delivery);
                     System.out.println("Tick: " + currentTick + " | DeliveryManager created a new delivery with " + delivery.getItems().size() + " items.");
+                    lastDeliveryTick = currentTick; // Update the last delivery tick
                 } catch (InterruptedException e) {
                     System.out.println("DeliveryManager was interrupted while adding a delivery. Exiting.");
-                    Thread.currentThread().interrupt(); // Preserve interrupt status
-                    return; // Exit if interrupted
+                    Thread.currentThread().interrupt();
+                    return;
                 }
             }
 
-            // Minimal sleep to prevent excessive CPU usage; this loop waits for the next tick update.
+            // Minimal sleep to wait for the next tick update
             try {
                 Thread.sleep(1);
             } catch (InterruptedException e) {
                 System.out.println("DeliveryManager was interrupted during the wait for the next tick. Exiting.");
-                Thread.currentThread().interrupt(); // Preserve interrupt status
+                Thread.currentThread().interrupt();
                 break;
             }
         }
