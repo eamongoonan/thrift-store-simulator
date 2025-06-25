@@ -1,29 +1,36 @@
 # 🛍️ Thrift Store Simulator
 
-A command-line simulation of a thrift store's daily operations, written in Java. This project models customer behavior, pricing logic, and inventory turnover to demonstrate basic object-oriented design, randomness, and business process modeling.
-
-Originally created as part of a university assignment, the simulator is structured using **Java classes and interfaces** to represent different types of customers and thrift store items.
+A multithreaded command-line **thrift store simulation** written in Java. Models customer arrivals, inventory processing, and checkout in parallel using threads with proper synchronization.
 
 ---
 
 ## 🧠 Key Concepts
 
-- **Simulation modeling** of a retail business
-- **Customer types** with varying behavior:
-  - Standard shoppers
-  - Budget-conscious buyers
-  - Impulse buyers
-- **Randomization** of item stock and purchasing behavior
-- **Polymorphism** and **inheritance** in customer/item classes
-- Command-line interaction and console-based output
+- **Multithreading**: Simulates independent customers arriving and shopping concurrently.
+- **Thread safety**: Uses Java synchronization (`synchronized` methods/blocks and locks) to safely manage shared resources like inventory and sales counters.
+- **Customer types**: Diverse shopper behaviors are implemented via polymorphism (RegularCustomer, BargainHunter, etc.).
+- **Randomized behavior**: Customers interact with inventory randomly to simulate real-life unpredictability.
+- **Business process modeling**: Tracks pricing, purchases, and inventory turnover over a simulated day.
+
+---
+
+## 🔧 Threading & Synchronization
+
+- Each `Customer` runs in its **own thread**, calling methods like `Inventory.browse(...)` and `Inventory.purchase(...)`.
+- `Inventory` is designed to be thread-safe:
+  - Critical sections are protected via `synchronized` blocks.
+  - Shared data structures (e.g., item lists, stock counts) are accessed in lock-protected methods to avoid race conditions.
+- A top-level `Simulation` class waits for all customer threads to complete before compiling sales results.
+
+This design allows realistic interleaving of customer actions with safe, synchronized updates to shared store resources.
 
 ---
 
 ## 🗂️ Project Structure
 
-- `Main.java` – Runs the simulation and outputs the result
-- `Item.java` – Represents a thrift store item (e.g., price, category)
-- `Customer.java` – Abstract customer class
-- `RegularCustomer.java`, `BargainHunter.java`, etc. – Concrete subclasses with specific buying behaviors
-- `Inventory.java` – Holds and manages all available items
-- `Simulation.java` – Orchestrates the day-to-day activity
+- `Main.java` – Initializes and starts the simulation with multiple customer threads.
+- `Inventory.java` – Shared synchronized inventory and helper methods.
+- `Customer.java` (abstract) – Defines customer behavior templates.
+- `RegularCustomer.java`, `BargainHunter.java`, etc. – Concrete customer types with specific shopping logic.
+- `Simulation.java` – Coordinates thread creation, start-up, and result aggregation.
+- `Item.java` – Represents thrift store goods.
